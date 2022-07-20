@@ -16,6 +16,7 @@ from gravity.util import which
 from supervisor import supervisorctl  # type: ignore
 
 DEFAULT_SUPERVISOR_SOCKET_PATH = os.environ.get("SUPERVISORD_SOCKET", '%(here)s/supervisor.sock')
+DEFAULT_SUPERVISOR_PID_PATH = os.environ.get("PID_FILE", "%(here)s/supervisord.pid")
 
 SUPERVISORD_CONF_TEMPLATE = f""";
 ; This file is maintained by Galaxy - CHANGES WILL BE OVERWRITTEN
@@ -26,7 +27,7 @@ file = {DEFAULT_SUPERVISOR_SOCKET_PATH}
 
 [supervisord]
 logfile = %(here)s/supervisord.log
-pidfile = %(here)s/supervisord.pid
+pidfile = {DEFAULT_SUPERVISOR_PID_PATH}
 loglevel = info
 nodaemon = false
 
