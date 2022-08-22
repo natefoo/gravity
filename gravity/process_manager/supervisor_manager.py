@@ -1,15 +1,17 @@
 """
 """
 import errno
+import hashlib
 import os
 import shlex
 import shutil
 import subprocess
+import tempfile
 import time
-from os.path import exists, join
+from os.path import exists, join, relpath
 
 from gravity.io import debug, error, exception, info, warn
-from gravity.process_manager import BaseProcessManager
+from gravity.process_manager import BaseProcessManager, FileChanges
 from gravity.state import GracefulMethod
 from gravity.util import which
 
@@ -403,6 +405,24 @@ class SupervisorProcessManager(BaseProcessManager):
                 if exists(conf):
                     os.unlink(conf)
 
+    def _process_config(self, config_file, config, supervisord_conf_dir=None, force=False):
+        # TODO: force should remove the dir contents and recreate them
+        instance_name = config["instance_name"]
+        attribs = config["attribs"]
+        supervisord_conf_dir = supervisord_conf_dir or self.supervisord_conf_dir
+        instance_conf_dir = join(supervisord_conf_dir, f"{instance_name}.d")
+        try:
+            os.makedirs(instance_conf_dir)
+        except OSError as exc:
+            if exc.errno != errno.EEXIST:
+                raise
+
+        for service in config["services"]:
+            #info("Updating service %s", self._service_program_name(instance_name, service))
+            self.__update_service(config_file, config, attribs, service, instance_conf_dir, instance_name)
+
+        # TODO: group
+
     def __start_stop(self, op, instance_names):
         self.update()
         instance_names, service_names, registered_instance_names = self.get_instance_names(instance_names)
@@ -476,13 +496,64 @@ class SupervisorProcessManager(BaseProcessManager):
             time.sleep(0.5)
         info("supervisord has terminated")
 
+    def _compare_dirs(self, source_dir, destination_dir):
+        source_files = set()
+        dest_files = set()
+        for root, dirs, files in os.walk(source_dir):
+            rel_root = relpath(root, start=source_dir)
+            for file in files:
+                source_files.add(join(rel_root, file))
+        for root, dirs, files in os.walk(destination_dir):
+            rel_root = relpath(root, start=destination_dir)
+            for file in files:
+                dest_files.add(join(rel_root, file))
+        add_files = source_files - dest_files
+        remove_files = dest_files - source_files
+        check_files = source_files & dest_files
+        changed_files = set()
+
+        for file in check_files:
+            source_file = join(source_dir, file)
+            dest_file = join(destination_dir, file)
+            source_hash = hashlib.sha1(open(source_file, "rb").read()).digest()
+            dest_hash = hashlib.sha1(open(dest_file, "rb").read()).digest()
+            if source_hash != dest_hash:
+                changed_files.add(file)
+
+        file_changes = FileChanges(add=add_files, remove=remove_files, update=changed_files)
+
+        debug("File changes to perform: %s", file_changes)
+
+        return file_changes
+
+    def _update_configs(self, source_dir, destination_dir, file_changes):
+        # FIXME: you want the log output to be services, not files
+        for file in file_changes.add:
+            info("Adding config %s", file)
+            shutil.copy(join(source_dir, file), join(destination_dir, file))
+        for file in file_changes.update:
+            info("Updating config %s", file)
+            shutil.copy(join(source_dir, file), join(destination_dir, file))
+        for file in file_changes.remove:
+            info("Removing config %s", file)
+            os.unlink(join(destination_dir, file))
+
     def update(self, force=False):
         """Add newly defined servers, remove any that are no longer present"""
-        configs, meta_changes = self.config_manager.determine_config_changes()
-        self._process_config_changes(configs, meta_changes, force)
-        # only need to update if supervisord is running, otherwise changes will be picked up at next start
-        if self.__supervisord_is_running():
-            self.supervisorctl("update")
+        test_supervisord_conf_dir = tempfile.mkdtemp(prefix="gravity-")
+        debug("Temporary supervisord conf dir for determining changes is: %s", test_supervisord_conf_dir)
+        for config_file in self.config_manager.get_registered_configs().keys():
+            config = self.config_manager.get_config(config_file)
+            self._process_config(config_file, config, supervisord_conf_dir=test_supervisord_conf_dir)
+        file_changes = self._compare_dirs(test_supervisord_conf_dir, self.supervisord_conf_dir)
+        if file_changes.has_changes:
+            # TODO: write/update supervisor group config if multi-instance
+            self._update_configs(test_supervisord_conf_dir, self.supervisord_conf_dir, file_changes)
+            # TODO: remove instances
+            # only need to update if supervisord is running, otherwise changes will be picked up at next start
+            if self.__supervisord_is_running():
+                self.supervisorctl("update")
+        shutil.rmtree(test_supervisord_conf_dir)
 
     def supervisorctl(self, *args, **kwargs):
         if not self.__supervisord_is_running():

@@ -7,6 +7,7 @@ import inspect
 import os
 import subprocess
 from abc import ABCMeta, abstractmethod
+from collections import namedtuple
 
 from gravity.config_manager import ConfigManager
 from gravity.io import exception
@@ -30,6 +31,12 @@ def process_manager(*args, **kwargs):
                     finally:
                         pm.terminate()
                     return
+
+
+class FileChanges(namedtuple("FileChanges", ["add", "remove", "update"], defaults=[set(), set(), set()])):
+    @property
+    def has_changes(self):
+        return any([self.add, self.remove, self.update])
 
 
 class BaseProcessManager(object, metaclass=ABCMeta):
