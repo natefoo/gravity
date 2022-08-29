@@ -160,6 +160,7 @@ class ConfigFile(AttributeDict):
     @property
     def defaults(self):
         return {
+            "process_manager": self["process_manager"],
             "instance_name": self["instance_name"],
             "galaxy_root": self["galaxy_root"],
             "log_dir": self["attribs"]["log_dir"],

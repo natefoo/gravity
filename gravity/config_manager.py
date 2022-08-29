@@ -94,6 +94,7 @@ class ConfigManager(object):
         config.services = []
         config.instance_name = gravity_config.instance_name
         config.config_type = server_section
+        config.process_manager = gravity_config.process_manager
         config.attribs["galaxy_infrastructure_url"] = app_config.get("galaxy_infrastructure_url", "").rstrip("/")
         if gravity_config.tusd.enable and not config.attribs["galaxy_infrastructure_url"]:
             exception("To run the tusd server you need to set galaxy_infrastructure_url in the galaxy section of galaxy.yml")
@@ -302,6 +303,12 @@ class ConfigManager(object):
 
     def is_registered(self, config_file):
         return config_file in self.get_registered_configs()
+
+    def get_process_manager_names(self, instances=None):
+        process_managers = set()
+        for config in self.get_registered_configs(instances=instances).values():
+            process_managers.add(config.process_manager)
+        return process_managers
 
     def add(self, config_files, galaxy_root=None):
         """Public method to add (register) config file(s)."""

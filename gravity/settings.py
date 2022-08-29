@@ -20,6 +20,11 @@ def none_to_default(cls, v, field):
         return v
 
 
+class ProcessManager(str, Enum):
+    supervisor = "supervisor"
+    systemd = "systemd"
+
+
 class LogLevel(str, Enum):
     debug = "DEBUG"
     info = "INFO"
@@ -173,6 +178,13 @@ class Settings(BaseSettings):
     ``uwsgi:`` section will be ignored if Galaxy is started via Gravity commands (e.g ``./run.sh``, ``galaxy`` or ``galaxyctl``).
     """
 
+    process_manager: ProcessManager = Field(
+        ProcessManager.supervisor,
+        description="""
+Process manager to use .
+``supervisor`` is the default process manager.
+``systemd`` is also supported.
+""")
     galaxy_root: Optional[str] = Field(
         None,
         description="""

@@ -10,6 +10,7 @@ from os.path import exists, join
 
 from gravity.io import debug, error, exception, info, warn
 from gravity.process_manager import BaseProcessManager
+from gravity.settings import ProcessManager
 from gravity.state import GracefulMethod
 from gravity.util import which
 
@@ -183,8 +184,11 @@ programs = {programs}
 
 
 class SupervisorProcessManager(BaseProcessManager):
-    def __init__(self, state_dir=None, start_daemon=True, foreground=False):
-        super(SupervisorProcessManager, self).__init__(state_dir=state_dir)
+
+    name = ProcessManager.supervisor
+
+    def __init__(self, state_dir=None, start_daemon=True, foreground=False, **kwargs):
+        super(SupervisorProcessManager, self).__init__(state_dir=state_dir, **kwargs)
         self.supervisord_exe = which("supervisord")
         self.supervisor_state_dir = join(self.state_dir, "supervisor")
         self.supervisord_conf_path = join(self.supervisor_state_dir, "supervisord.conf")
@@ -382,7 +386,7 @@ class SupervisorProcessManager(BaseProcessManager):
                 os.rmdir(dir)
 
     def __start_stop(self, op, instance_names):
-        self.update()
+        self.update(instance_names)
         instance_names, service_names, registered_instance_names = self.get_instance_names(instance_names)
         for instance_name in instance_names:
             target = f"{instance_name}:*" if self.use_group else "all"
@@ -454,12 +458,12 @@ class SupervisorProcessManager(BaseProcessManager):
             time.sleep(0.5)
         info("supervisord has terminated")
 
-    def update(self, force=False):
+    def update(self, instance_names, force=False):
         """Add newly defined servers, remove any that are no longer present"""
         if force:
             shutil.rmtree(self.supervisord_conf_dir)
             os.makedirs(self.supervisord_conf_dir)
-        for config_file, config in self.config_manager.get_registered_configs().items():
+        for config_file, config in self.config_manager.get_registered_configs(instances=instance_names).items():
             self._process_config(config_file, config)
         # only need to update if supervisord is running, otherwise changes will be picked up at next start
         if self.__supervisord_is_running():
