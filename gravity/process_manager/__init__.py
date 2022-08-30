@@ -211,6 +211,10 @@ class ProcessManagerRouter(BaseProcessManager):
         for pm_name, instance_names in instance_names_by_pm.items():
             pm = self.process_managers[pm_name]
             debug(f"Calling '{method}()' in process manager {pm_name} for instance(s): {instance_names}")
+            # the kwargs are just whatever the user provided, we swap these out for validated instance names for the
+            # given process manager
+            if "instance_names" in kwargs:
+                kwargs["instance_names"] = instance_names
             getattr(pm, method)(*args, **kwargs)
 
     def _process_config(self, config_file, config, **kwargs):

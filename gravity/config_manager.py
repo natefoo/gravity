@@ -350,6 +350,7 @@ class ConfigManager(object):
     def remove(self, config_files):
         # FIXME: paths are checked by click now
         # allow the arg to be instance names
+        # FIXME: deregister no longer causes service config removal on update
         configs_by_instance = self.get_registered_configs(instances=config_files)
         if configs_by_instance:
             supplied_config_files = []
