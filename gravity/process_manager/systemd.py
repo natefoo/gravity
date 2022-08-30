@@ -26,27 +26,30 @@ class SystemdProcessManager(BaseProcessManager):
         """ """
         debug("TERMINATE")
 
-    def stop(self, instance_names):
+    def stop(self, instance_names=None):
         """ """
         debug(f"STOP: {instance_names}")
 
-    def restart(self, instance_names):
+    def restart(self, instance_names=None):
         """ """
-        raise NotImplementedError()
+        debug(f"RESTART: {instance_names}")
 
-    def reload(self, instance_names):
+    def reload(self, instance_names=None):
         """ """
-        raise NotImplementedError()
+        debug(f"RELOAD: {instance_names}")
 
-    def graceful(self, instance_names):
+    def graceful(self, instance_names=None):
         """ """
-        raise NotImplementedError()
+        debug(f"GRACEFUL: {instance_names}")
 
-    def update(self, instance_names, force=False):
+    def status(self):
+        """ """
+        debug(f"STATUS")
+
+    def update(self, instance_names=None, force=False):
         """ """
         debug(f"UPDATE: {instance_names}")
 
-    def shutdown(self, instance_names):
+    def shutdown(self):
         """ """
-        raise NotImplementedError()
-
+        debug(f"SHUTDOWN")

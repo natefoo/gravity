@@ -15,7 +15,7 @@ from gravity.util import which
 
 @contextlib.contextmanager
 def process_manager(*args, **kwargs):
-    pm = ProcessManagerProxy(*args, **kwargs)
+    pm = ProcessManagerRouter(*args, **kwargs)
     try:
         yield pm
     finally:
@@ -73,11 +73,23 @@ class BaseProcessManager(object, metaclass=ABCMeta):
         return environment
 
     @abstractmethod
-    def start(self, instance_names):
+    def _process_config(self, config_file, config, **kwargs):
         """ """
 
     @abstractmethod
-    def _process_config(self, config_file, config, **kwargs):
+    def start(self, instance_names=None):
+        """ """
+
+    @abstractmethod
+    def stop(self, instance_names=None):
+        """ """
+
+    @abstractmethod
+    def restart(self, instance_names=None):
+        """ """
+
+    @abstractmethod
+    def reload(self, instance_names=None):
         """ """
 
     @abstractmethod
@@ -85,15 +97,19 @@ class BaseProcessManager(object, metaclass=ABCMeta):
         """ """
 
     @abstractmethod
-    def stop(self, instance_names):
+    def graceful(self, instance_names=None):
         """ """
 
     @abstractmethod
-    def restart(self, instance_names):
+    def status(self):
         """ """
 
     @abstractmethod
-    def reload(self, instance_names):
+    def update(self, instance_names=None, force=False):
+        """ """
+
+    @abstractmethod
+    def shutdown(self):
         """ """
 
     def follow(self, instance_names, quiet=False):
@@ -124,18 +140,6 @@ class BaseProcessManager(object, metaclass=ABCMeta):
                 tail_popen = subprocess.Popen(cmd)
                 tail_popen.wait()
 
-    @abstractmethod
-    def graceful(self, instance_names):
-        """ """
-
-    @abstractmethod
-    def update(self, instance_names, force=False):
-        """ """
-
-    @abstractmethod
-    def shutdown(self, instance_names):
-        """ """
-
     def get_instance_names(self, instance_names):
         registered_instance_names = self.config_manager.get_registered_instance_names()
         unknown_instance_names = []
@@ -154,9 +158,9 @@ class BaseProcessManager(object, metaclass=ABCMeta):
         return instance_names, unknown_instance_names, registered_instance_names
 
 
-class ProcessManagerProxy(BaseProcessManager):
+class ProcessManagerRouter(BaseProcessManager):
     def __init__(self, state_dir=None, start_daemon=True, foreground=False, **kwargs):
-        super(ProcessManagerProxy, self).__init__(state_dir=state_dir, **kwargs)
+        super(ProcessManagerRouter, self).__init__(state_dir=state_dir, **kwargs)
         self._load_pm_modules(state_dir=state_dir, **kwargs)
 
     def _load_pm_modules(self, *args, **kwargs):
@@ -170,45 +174,7 @@ class ProcessManagerProxy(BaseProcessManager):
                         pm = obj(*args, **kwargs)
                         self.process_managers[pm.name] = pm
 
-    def _pm_for_instance(self, instance_name):
-        config = self.config_manager.get_instance_config(instance_name)
-        return self.process_managers[config.process_manager]
-
-    def start(self, instance_names):
-        """ """
-        instance_names_by_pm = self._group_instance_names_by_pm(instance_names)
-        for pm_name, instance_names in instance_names_by_pm.items():
-            pm = self.process_managers[pm_name]
-            pm.start(instance_names)
-
-    def _process_config(self, config_file, config, **kwargs):
-        """ """
-        raise NotImplementedError()
-
-    def terminate(self):
-        """ """
-        debug("TERMINATE")
-
-    def stop(self, instance_names):
-        """ """
-        instance_names_by_pm = self._group_instance_names_by_pm(instance_names)
-        for pm_name, instance_names in instance_names_by_pm.items():
-            pm = self.process_managers[pm_name]
-            pm.stop(instance_names)
-
-    def restart(self, instance_names):
-        """ """
-        raise NotImplementedError()
-
-    def reload(self, instance_names):
-        """ """
-        raise NotImplementedError()
-
-    def graceful(self, instance_names):
-        """ """
-        raise NotImplementedError()
-
-    def _group_instance_names_by_pm(self, instance_names):
+    def __group_instance_names_by_pm(self, instance_names):
         instance_names_by_pm = {}
         instance_names = self.get_instance_names(instance_names)[0]
         for instance_name in instance_names:
@@ -218,6 +184,46 @@ class ProcessManagerProxy(BaseProcessManager):
             except KeyError:
                 instance_names_by_pm[config.process_manager] = [instance_name]
         return instance_names_by_pm
+
+    def __route_method(self, method, *args, **kwargs):
+        instance_names = kwargs.get("instance_names")
+        instance_names_by_pm = self.__group_instance_names_by_pm(instance_names)
+        for pm_name, instance_names in instance_names_by_pm.items():
+            pm = self.process_managers[pm_name]
+            debug(f"Calling '{method}()' in process manager {pm_name} for instance(s): {instance_names}")
+            getattr(pm, method)(*args, **kwargs)
+
+    def _process_config(self, config_file, config, **kwargs):
+        """ """
+        raise NotImplementedError()
+
+    def start(self, instance_names=None):
+        """ """
+        self.__route_method('start', instance_names=instance_names)
+
+    def terminate(self):
+        """ """
+        self.__route_method('terminate')
+
+    def stop(self, instance_names):
+        """ """
+        self.__route_method('stop', instance_names=instance_names)
+
+    def restart(self, instance_names):
+        """ """
+        self.__route_method('restart', instance_names=instance_names)
+
+    def reload(self, instance_names):
+        """ """
+        self.__route_method('reload', instance_names=instance_names)
+
+    def graceful(self, instance_names):
+        """ """
+        self.__route_method('graceful', instance_names=instance_names)
+
+    def status(self):
+        """ """
+        self.__route_method('status')
 
     def update(self, instance_names=None, force=False):
         """ """
@@ -232,9 +238,9 @@ class ProcessManagerProxy(BaseProcessManager):
         for pm in self.process_managers.values():
             pm.update(instance_names, force=force)
 
-    def shutdown(self, instance_names):
+    def shutdown(self):
         """ """
-        raise NotImplementedError()
+        self.__route_method('shutdown')
 
 
 

@@ -422,11 +422,11 @@ class SupervisorProcessManager(BaseProcessManager):
         if unknown_services:
             exception(f'Invalid service(s): {", ".join(unknown_services)}. Known service(s) are {", ".join(known_services)}')
 
-    def start(self, instance_names):
+    def start(self, instance_names=None):
         self.__start_stop("start", instance_names)
         self.supervisorctl("status")
 
-    def stop(self, instance_names):
+    def stop(self, instance_names=None):
         self.__start_stop("stop", instance_names)
         # Exit supervisor if all processes are stopped
         supervisor = self.__get_supervisor()
@@ -437,13 +437,13 @@ class SupervisorProcessManager(BaseProcessManager):
         else:
             info("Not all processes stopped, supervisord not shut down (hint: see `galaxyctl status`)")
 
-    def restart(self, instance_names):
+    def restart(self, instance_names=None):
         self.__start_stop("restart", instance_names)
 
-    def reload(self, instance_names):
+    def reload(self, instance_names=None):
         self.__reload_graceful("reload", instance_names)
 
-    def graceful(self, instance_names):
+    def graceful(self, instance_names=None):
         self.__reload_graceful("graceful", instance_names)
 
     def status(self):
@@ -459,9 +459,10 @@ class SupervisorProcessManager(BaseProcessManager):
             time.sleep(0.5)
         info("supervisord has terminated")
 
-    def update(self, instance_names, force=False):
+    def update(self, instance_names=None, force=False):
         """Add newly defined servers, remove any that are no longer present"""
         if force:
+            info(f"Removing contents of {self.supervisord_conf_dir} due to `force` option")
             shutil.rmtree(self.supervisord_conf_dir)
             os.makedirs(self.supervisord_conf_dir)
         for config_file, config in self.config_manager.get_registered_configs(instances=instance_names).items():
