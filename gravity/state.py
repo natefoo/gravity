@@ -177,6 +177,13 @@ class ConfigFile(AttributeDict):
 
 
 class GravityState(AttributeDict):
+    persist_keys = (
+        "config_type",
+        "instance_name",
+        "galaxy_root",
+        "process_manager",
+    )
+
     @classmethod
     def open(cls, name):
         try:

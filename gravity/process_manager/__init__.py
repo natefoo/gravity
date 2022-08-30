@@ -219,12 +219,17 @@ class ProcessManagerProxy(BaseProcessManager):
                 instance_names_by_pm[config.process_manager] = [instance_name]
         return instance_names_by_pm
 
-    def update(self, instance_names, force=False):
+    def update(self, instance_names=None, force=False):
         """ """
+        for config_file, config in self.config_manager.get_registered_configs().items():
+            debug(f"#### CHANGES: {config_file}: {config.get('changed')}")
+        #return
         # FIXME: update is special because it has to run on all PMs if the instance's PM changed
-        instance_names_by_pm = self._group_instance_names_by_pm(instance_names)
-        for pm_name, instance_names in instance_names_by_pm.items():
-            pm = self.process_managers[pm_name]
+        #instance_names_by_pm = self._group_instance_names_by_pm(instance_names)
+        #for pm_name, instance_names in instance_names_by_pm.items():
+        #    pm = self.process_managers[pm_name]
+        #    pm.update(instance_names, force=force)
+        for pm in self.process_managers.values():
             pm.update(instance_names, force=force)
 
     def shutdown(self, instance_names):

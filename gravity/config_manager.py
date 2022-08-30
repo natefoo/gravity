@@ -70,16 +70,16 @@ class ConfigManager(object):
             assert json_state == yaml_state, f"Converted config differs from previous config, remove {self.config_state_path} to retry"
             os.unlink(config_state_json)
 
-    def get_config(self, conf, defaults=None):
+    def get_config(self, conf, stored=None):
         if conf in self.__configs:
             return self.__configs[conf]
 
-        defaults = defaults or {}
+        stored = stored or {}
         server_section = self.galaxy_server_config_section
         with open(conf) as config_fh:
             config_dict = yaml_safe_load_with_include(config_fh)
         _gravity_config = config_dict.get(self.gravity_config_section) or {}
-        gravity_config = Settings(**recursive_update(defaults, _gravity_config))
+        gravity_config = Settings(**_gravity_config)
         if gravity_config.log_dir is None:
             gravity_config.log_dir = join(expanduser(self.state_dir), "log")
 
@@ -156,6 +156,14 @@ class ConfigManager(object):
         # see how this is determined.
         self.create_handler_services(gravity_config, config)
         self.create_gxit_services(gravity_config, app_config, config)
+
+        # determine changes from stored state
+        if stored:
+            config["changed"] = {}
+            for key in GravityState.persist_keys:
+                if key in stored and config[key] != stored[key]:
+                    config["changed"][key] = stored[key]
+
         self.__configs[conf] = config
         return config
 
@@ -257,13 +265,13 @@ class ConfigManager(object):
         configs = self.state.config_files
         for config_file, config in list(configs.items()):
             if (instances is not None and config["instance_name"] in instances) or instances is None:
-                rval[config_file] = self.get_config(config_file)
+                rval[config_file] = self.get_config(config_file, stored=config)
         return rval
 
     def get_registered_config(self, config_file):
         """Return the persisted value of the named config file."""
         if config_file in self.state.config_files:
-            return self.get_config(config_file)
+            return self.get_config(config_file, stored=self.state.config_files[config_file])
         return None
 
     def get_instance_config(self, instance_name):
@@ -310,26 +318,21 @@ class ConfigManager(object):
             process_managers.add(config.process_manager)
         return process_managers
 
-    def add(self, config_files, galaxy_root=None):
+    def add(self, config_files):
         """Public method to add (register) config file(s)."""
         for config_file in config_files:
             config_file = abspath(expanduser(config_file))
             if self.is_registered(config_file):
                 warn("%s is already registered", config_file)
                 continue
-            defaults = None
-            if galaxy_root is not None:
-                defaults = {"galaxy_root": galaxy_root}
-            conf = self.get_config(config_file, defaults=defaults)
+            conf = self.get_config(config_file)
             if conf is None:
                 exception(f"Cannot add {config_file}: File is unknown type")
             if conf["instance_name"] is None:
                 conf["instance_name"] = conf["config_type"] + "-" + hashlib.md5(os.urandom(32)).hexdigest()[:12]
-            conf_data = {
-                "config_type": conf["config_type"],
-                "instance_name": conf["instance_name"],
-                "galaxy_root": conf["galaxy_root"],
-            }
+            conf_data = {}
+            for key in GravityState.persist_keys:
+                conf_data[key] = conf[key]
             self._register_config_file(config_file, conf_data)
             info("Registered %s config: %s", conf["config_type"], config_file)
 

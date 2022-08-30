@@ -351,6 +351,7 @@ class SupervisorProcessManager(BaseProcessManager):
         intended_configs = set()
         present_configs = set()
         present_dirs = set()
+
         try:
             os.makedirs(instance_conf_dir)
         except OSError as exc:
@@ -370,7 +371,7 @@ class SupervisorProcessManager(BaseProcessManager):
             self._update_file(group_conf, contents, instance_name, "supervisor group")
             intended_configs.add(group_conf)
 
-        for root, dirs, files in os.walk(supervisord_conf_dir):
+        for root, dirs, files in os.walk(instance_conf_dir):
             for file in files:
                 present_configs.add(join(root, file))
             for dir in dirs:
@@ -464,7 +465,18 @@ class SupervisorProcessManager(BaseProcessManager):
             shutil.rmtree(self.supervisord_conf_dir)
             os.makedirs(self.supervisord_conf_dir)
         for config_file, config in self.config_manager.get_registered_configs(instances=instance_names).items():
-            self._process_config(config_file, config)
+            process_manager = config["process_manager"]
+            if process_manager == self.name:
+                self._process_config(config_file, config)
+            else:
+                # FIXME: refactor
+                instance_name = config["instance_name"]
+                instance_conf_dir = join(self.supervisord_conf_dir, f"{instance_name}.d")
+                group_file = join(self.supervisord_conf_dir, f"group_{instance_name}.conf")
+                if os.path.exists(instance_conf_dir):
+                    shutil.rmtree(instance_conf_dir)
+                if os.path.exists(group_file):
+                    os.unlink(group_file)
         # only need to update if supervisord is running, otherwise changes will be picked up at next start
         if self.__supervisord_is_running():
             self.supervisorctl("update")
