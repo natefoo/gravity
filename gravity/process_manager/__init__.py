@@ -9,7 +9,7 @@ import subprocess
 from abc import ABCMeta, abstractmethod
 
 from gravity.config_manager import ConfigManager
-from gravity.io import exception, debug, error
+from gravity.io import exception, debug, error, info
 from gravity.util import which
 
 
@@ -71,6 +71,26 @@ class BaseProcessManager(object, metaclass=ABCMeta):
             environment_from = service.service_type
         environment.update(attribs.get(environment_from, {}).get("environment", {}))
         return environment
+
+    def _file_needs_update(self, path, contents):
+        """Update if contents differ"""
+        if os.path.exists(path):
+            # check first whether there are changes
+            with open(path) as fh:
+                existing_contents = fh.read()
+            if existing_contents == contents:
+                return False
+        return True
+
+    def _update_file(self, path, contents, name, file_type):
+        exists = os.path.exists(path)
+        if (exists and self._file_needs_update(path, contents)) or not exists:
+            verb = "Updating" if exists else "Adding"
+            info("%s %s %s", verb, file_type, name)
+            with open(path, "w") as out:
+                out.write(contents)
+        else:
+            debug("No changes to existing config for %s %s at %s", file_type, name, path)
 
     @abstractmethod
     def _process_config(self, config_file, config, **kwargs):
