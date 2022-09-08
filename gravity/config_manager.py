@@ -105,6 +105,8 @@ class ConfigManager(object):
         config.attribs["tusd"] = gravity_config.tusd.dict()
         config.attribs["celery"] = gravity_config.celery.dict()
         config.attribs["handlers"] = gravity_config.handlers
+        config.attribs["galaxy_user"] = gravity_config.galaxy_user
+        config.attribs["galaxy_group"] = gravity_config.galaxy_group
         # Store gravity version, in case we need to convert old setting
         config.attribs['gravity_version'] = __version__
         webapp_service_names = []
@@ -148,8 +150,6 @@ class ConfigManager(object):
             for service_name in [x["service_name"] for x in ConfigManager.get_job_config(job_config) if x["service_name"] not in webapp_service_names]:
                 config.services.append(service_for_service_type("standalone")(config_type=config.config_type, service_name=service_name))
 
-        # Dynamic job handlers are configured using `job_handler_count` in galaxy.yml.
-        #
         # FIXME: This should imply explicit configuration of the handler assignment method. If not explicitly set, the
         # web process will be a handler, which is not desirable when dynamic handlers are used. Currently Gravity
         # doesn't parse that part of the job config. See logic in lib/galaxy/web_stack/handlers.py _get_is_handler() to
@@ -288,7 +288,7 @@ class ConfigManager(object):
 
     def get_registered_services(self):
         rval = []
-        for config_file, config in self.get_registered_configs.items():
+        for config_file, config in self.get_registered_configs().items():
             for service in config["services"]:
                 service["config_file"] = config_file
                 service["instance_name"] = config["instance_name"]

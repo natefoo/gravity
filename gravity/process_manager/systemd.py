@@ -63,25 +63,24 @@ class SystemdProcessManager(BaseProcessManager):
         return False
 
     def __systemctl(self, *args, **kwargs):
+        args = list(args)
         if self.user_mode:
-            args = ["--user"] + list(args)
+            args = ["--user"] + args
         try:
             debug("Calling systemctl with args: %s", args)
             subprocess.check_call(["systemctl"] + args)
         except:
             raise
 
-    def __unit_name(self, instance_name, service, file=False):
-        unit_name = f"{service['config_type']}-{service['service_name']}"
+    def __unit_name(self, instance_name, service):
+        unit_name = f"{service['config_type']}-"
         if self.__use_instance:
-            unit_name += "@"
-            if not file:
-                unit_name += instance_name
-        unit_name += ".service"
+            unit_name += f"{instance_name}-"
+        unit_name += f"{service['service_name']}.service"
         return unit_name
 
     def __update_service(self, config_file, config, attribs, service, instance_name):
-        unit_name = self.__unit_name(instance_name, service, file=True)
+        unit_name = self.__unit_name(instance_name, service)
 
         # FIXME: refactor
         # used by the "standalone" service type
@@ -180,7 +179,9 @@ class SystemdProcessManager(BaseProcessManager):
 
     def stop(self, instance_names=None):
         """ """
-        debug(f"STOP: {instance_names}")
+        for config_file, config in self.config_manager.get_registered_configs(instances=instance_names).items():
+            unit_names = [self.__unit_name(config.instance_name, s) for s in config["services"]]
+            self.__systemctl("stop", *unit_names)
 
     def restart(self, instance_names=None):
         """ """
@@ -196,7 +197,9 @@ class SystemdProcessManager(BaseProcessManager):
 
     def status(self):
         """ """
-        debug(f"STATUS")
+        for config_file, config in self.config_manager.get_registered_configs().items():
+            unit_names = [self.__unit_name(config.instance_name, s) for s in config["services"]]
+            self.__systemctl("status", "--lines=0", *unit_names)
 
     def update(self, instance_names=None, force=False):
         """ """

@@ -191,6 +191,18 @@ Process manager to use .
 Specify Galaxy's root directory.
 Gravity will attempt to find the root directory, but you can set the directory explicitly with this option.
 """)
+    galaxy_user: Optional[str] = Field(
+        None,
+        description="""
+User to run Galaxy as, when using the systemd process manager as root.
+Ignored with supervisor or user-mode systemd.
+""")
+    galaxy_group: Optional[str] = Field(
+        None,
+        description="""
+Group to run Galaxy as, when using the systemd process manager as root.
+Ignored with supervisor or user-mode systemd.
+""")
     log_dir: Optional[str] = Field(
         None,
         description="""
