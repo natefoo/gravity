@@ -22,7 +22,7 @@ def cli(ctx, config):
             error_message = f"{config} is not a registered config file.{newline}"
             registered_configs = cm.get_registered_configs()
             if registered_configs:
-                registered_configs_str = "\n".join(registered_configs)
+                registered_configs_str = "\n".join([c.__file__ for c in registered_configs])
                 error_message = f'{error_message}Registered config files are:{newline}{registered_configs_str}{newline}{newline}'
             else:
                 error_message = f'{error_message}No config files have been registered.{newline}{newline}'
