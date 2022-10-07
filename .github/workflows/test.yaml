@@ -37,7 +37,7 @@ jobs:
           GRAVITY_TEST_GALAXY_BRANCH: ${{ matrix.galaxy-branch }}
           # Failed to connect to bus: $DBUS_SESSION_BUS_ADDRESS and $XDG_RUNTIME_DIR not defined (consider using --machine=<user>@.host --user to connect to bus of other user)
           GRAVITY_SYSTEMCTL_EXTRA_ARGS: --machine=runner@.host
-          #XDG_RUNTIME_DIR: /run/user/$UID
+          XDG_RUNTIME_DIR: /run/user/$UID
           #TOX_TESTENV_PASSENV: XDG_RUNTIME_DIR
       - name: "Upload coverage to Codecov"
         uses: codecov/codecov-action@v2
