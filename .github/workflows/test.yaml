@@ -24,6 +24,9 @@ jobs:
       - name: systemd test
         run: |
           set -x
+          id
+          ls -l /run/user/$UID
+          set
           systemctl --user status
           systemctl --user daemon-reload
           python ./systemd-test.py systemctl --user status
@@ -39,5 +42,6 @@ jobs:
           #GRAVITY_SYSTEMCTL_EXTRA_ARGS: --machine=runner@.host
           #XDG_RUNTIME_DIR: /run/user/$UID
           #TOX_TESTENV_PASSENV: XDG_RUNTIME_DIR
+          TOX_TESTENV_PASSENV: DBUS_SESSION_BUS_ADDRESS
       - name: "Upload coverage to Codecov"
         uses: codecov/codecov-action@v2
