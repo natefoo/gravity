@@ -43,6 +43,6 @@ jobs:
           #GRAVITY_SYSTEMCTL_EXTRA_ARGS: --machine=runner@.host
           #XDG_RUNTIME_DIR: /run/user/$UID
           #TOX_TESTENV_PASSENV: XDG_RUNTIME_DIR
-          TOX_TESTENV_PASSENV: DBUS_SESSION_BUS_ADDRESS
+          #TOX_TESTENV_PASSENV: DBUS_SESSION_BUS_ADDRESS
       - name: "Upload coverage to Codecov"
         uses: codecov/codecov-action@v2
