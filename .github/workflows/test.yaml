@@ -13,11 +13,6 @@ jobs:
         python-version: ['3.7', '3.10']
         galaxy-branch: ['release_22.01', 'dev']
     steps:
-      - name: systemd test
-        run: |
-          systemctl --user status
-          systemctl --user daemon-reload
-          systemctl --user
       - uses: actions/checkout@v2
       - uses: actions/setup-python@v2
         with:
@@ -26,6 +21,16 @@ jobs:
         run: python -m venv tests/galaxy_venv
       - name: Install tox
         run: pip install tox
+      - name: systemd test
+        run: |
+          set -x
+          systemctl --user status
+          systemctl --user daemon-reload
+          python ./systemd-test.py systemctl --user status
+          python ./systemd-test.py systemctl --user --machine=runner@.host status
+          XDG_RUNTIME_DIR=/run/user/$UID python ./systemd-test.py systemctl --user status
+          XDG_RUNTIME_DIR=/run/user/$UID python ./systemd-test.py systemctl --user --machine=runner@.host status
+          set +x
       - name: Run tests
         run: tox -e test
         env:
