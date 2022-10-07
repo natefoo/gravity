@@ -71,11 +71,11 @@ class SystemdProcessManager(BaseProcessManager):
 
     def __systemctl(self, *args, ignore_rc=None, **kwargs):
         args = list(args)
-        if self.user_mode:
-            args = ["--user"] + args
         extra_args = os.environ.get("GRAVITY_SYSTEMCTL_EXTRA_ARGS")
         if extra_args:
             args = shlex.split(extra_args) + args
+        if self.user_mode:
+            args = ["--user"] + args
         debug("Calling systemctl with args: %s", args)
         try:
             subprocess.check_call(["systemctl"] + args)
