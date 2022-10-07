@@ -13,6 +13,11 @@ jobs:
         python-version: ['3.7', '3.10']
         galaxy-branch: ['release_22.01', 'dev']
     steps:
+      - name: systemd test
+        run: |
+          systemctl --user status
+          systemctl --user daemon-reload
+          systemctl --user
       - uses: actions/checkout@v2
       - uses: actions/setup-python@v2
         with:
