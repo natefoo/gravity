@@ -21,28 +21,9 @@ jobs:
         run: python -m venv tests/galaxy_venv
       - name: Install tox
         run: pip install tox
-      - name: systemd test
-        run: |
-          set -x
-          id
-          ls -l /run/user/$UID
-          echo "XDG_RUNTIME_DIR=$XDG_RUNTIME_DIR"
-          echo "DBUS_SESSION_BUS_ADDRESS=i$DBUS_SESSION_BUS_ADDRESS"
-          systemctl --user status
-          systemctl --user daemon-reload
-          python ./systemd-test.py systemctl --user status
-          python ./systemd-test.py systemctl --user --machine=runner@.host status
-          XDG_RUNTIME_DIR=/run/user/$UID python ./systemd-test.py systemctl --user status
-          XDG_RUNTIME_DIR=/run/user/$UID python ./systemd-test.py systemctl --user --machine=runner@.host status
-          set +x
       - name: Run tests
         run: tox -e test
         env:
           GRAVITY_TEST_GALAXY_BRANCH: ${{ matrix.galaxy-branch }}
-          # Failed to connect to bus: $DBUS_SESSION_BUS_ADDRESS and $XDG_RUNTIME_DIR not defined (consider using --machine=<user>@.host --user to connect to bus of other user)
-          #GRAVITY_SYSTEMCTL_EXTRA_ARGS: --machine=runner@.host
-          #XDG_RUNTIME_DIR: /run/user/$UID
-          #TOX_TESTENV_PASSENV: XDG_RUNTIME_DIR
-          #TOX_TESTENV_PASSENV: DBUS_SESSION_BUS_ADDRESS
       - name: "Upload coverage to Codecov"
         uses: codecov/codecov-action@v2
