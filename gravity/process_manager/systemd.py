@@ -172,7 +172,6 @@ class SystemdProcessManager(BaseProcessManager):
 
         environment = self._service_environment(service, attribs)
         if virtualenv_bin and service.add_virtualenv_to_path:
-            # FIXME: what should we use for a default here?
             path = self.__systemd_env_path()
             environment["PATH"] = ":".join([virtualenv_bin, path])
         format_vars["environment"] = "\n".join("Environment={}={}".format(k, shlex.quote(v.format(**format_vars))) for k, v in environment.items())
@@ -203,9 +202,6 @@ class SystemdProcessManager(BaseProcessManager):
 
         for service in config["services"]:
             intended_configs.add(self.__update_service(config_file, config, attribs, service, instance_name))
-
-        # TODO: we need to systemctl enable, but can we do that before daemon-reload?
-        # alternatively, can we just replace `systemctl start` with `systemctl enable --now`?
 
         return intended_configs
 
@@ -245,7 +241,7 @@ class SystemdProcessManager(BaseProcessManager):
     def start(self, configs=None, service_names=None):
         """ """
         unit_names = self.__unit_names(configs, service_names)
-        self.__systemctl("start", *unit_names)
+        self.__systemctl("enable", "--now", *unit_names)
 
     def stop(self, configs=None, service_names=None):
         """ """

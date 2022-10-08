@@ -153,11 +153,17 @@ def test_update_force(galaxy_yml, default_config_manager, process_manager_name):
 def test_cleanup(galaxy_yml, default_config_manager, process_manager_name):
     test_update(galaxy_yml, default_config_manager, process_manager_name)
     gunicorn_conf_path = service_conf_path(default_config_manager.state_dir, process_manager_name, 'gunicorn')
+    celery_conf_path = service_conf_path(default_config_manager.state_dir, process_manager_name, 'celery')
+    celery_beat_conf_path = service_conf_path(default_config_manager.state_dir, process_manager_name, 'celery-beat')
     default_config_manager.remove([str(galaxy_yml)])
     assert gunicorn_conf_path.exists()
+    assert celery_conf_path.exists()
+    assert celery_beat_conf_path.exists()
     with process_manager.process_manager(state_dir=default_config_manager.state_dir) as pm:
         pm.update()
     assert not gunicorn_conf_path.exists()
+    assert not celery_conf_path.exists()
+    assert not celery_beat_conf_path.exists()
 
 
 @pytest.mark.parametrize('process_manager_name', ['supervisor', 'systemd'])
