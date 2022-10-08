@@ -223,11 +223,15 @@ class SystemdProcessManager(BaseProcessManager):
         present_configs = set([os.path.join(self.__systemd_unit_dir, f) for f in _present_configs])
 
         for file in (present_configs - intended_configs):
-            service_name = os.path.basename(os.path.splitext(file)[0])
+            unit_name = os.path.basename(file)
+            service_name = os.path.splitext(unit_name)[0]
             info(f"Ensuring service is stopped: {service_name}")
-            self.__systemctl("disable", "--now", service_name)
+            info(f"#### unit dir before stop: {os.listdir(self.__systemd_unit_dir)}")
+            self.__systemctl("disable", "--now", unit_name)
+            info(f"#### unit dir after stop: {os.listdir(self.__systemd_unit_dir)}")
             info("Removing service config %s", file)
             os.unlink(file)
+            info(f"#### unit dir after unlink: {os.listdir(self.__systemd_unit_dir)}")
 
     def __unit_names(self, configs, service_names):
         unit_names = []
