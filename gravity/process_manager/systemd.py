@@ -227,6 +227,8 @@ class SystemdProcessManager(BaseProcessManager):
             service_name = os.path.splitext(unit_name)[0]
             info(f"Ensuring service is stopped: {service_name}")
             info(f"#### unit dir before stop: {os.listdir(self.__systemd_unit_dir)}")
+            info(f"#### systemctl status before stop: {self.__systemctl('status', capture=True)}")
+            info(f"#### systemctl list-units before stop: {self.__systemctl('list-units', capture=True)}")
             self.__systemctl("disable", "--now", unit_name)
             info(f"#### unit dir after stop: {os.listdir(self.__systemd_unit_dir)}")
             info("Removing service config %s", file)
