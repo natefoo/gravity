@@ -21,10 +21,11 @@ jobs:
         run: python -m venv tests/galaxy_venv
       - name: Install tox
         run: pip install tox
+      - name: unit-paths
+        run: systemd-analyze --user unit-paths
       - name: Run tests
         run: tox -e test
         env:
           GRAVITY_TEST_GALAXY_BRANCH: ${{ matrix.galaxy-branch }}
-          GRAVITY_DEBUG: true
       - name: "Upload coverage to Codecov"
         uses: codecov/codecov-action@v2
