@@ -1,4 +1,5 @@
 import json
+import os
 import string
 from pathlib import Path
 
@@ -94,7 +95,7 @@ def service_conf_dir(state_dir, process_manager_name):
     if process_manager_name == 'supervisor':
         return state_dir / 'supervisor' / 'supervisord.conf.d' / '_default_.d'
     elif process_manager_name == 'systemd':
-        return state_dir / 'systemd'
+        return Path(os.environ.get('GRAVITY_SYSTEMD_UNIT_PATH'))
     raise Exception(f"Invalid process manager name: {process_manager_name}")
 
 
@@ -152,15 +153,6 @@ def test_update_force(galaxy_yml, default_config_manager, process_manager_name):
 @pytest.mark.parametrize('process_manager_name', ['supervisor', 'systemd'])
 def test_cleanup(galaxy_yml, default_config_manager, process_manager_name):
     test_update(galaxy_yml, default_config_manager, process_manager_name)
-    import subprocess, time
-    for i in range(0, 5):
-        try:
-            subprocess.check_call(["systemctl", "--user", "list-unit-files", "galaxy-*"])
-            break
-        except subprocess.CalledProcessError:
-            print(f"#### list-unit-files failed attempt {i}")
-            time.sleep(5)
-            continue
     gunicorn_conf_path = service_conf_path(default_config_manager.state_dir, process_manager_name, 'gunicorn')
     celery_conf_path = service_conf_path(default_config_manager.state_dir, process_manager_name, 'celery')
     celery_beat_conf_path = service_conf_path(default_config_manager.state_dir, process_manager_name, 'celery-beat')

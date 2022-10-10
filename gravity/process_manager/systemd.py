@@ -59,7 +59,7 @@ class SystemdProcessManager(BaseProcessManager):
 
     @property
     def __systemd_unit_dir(self):
-        unit_path = os.environ.get("SYSTEMD_UNIT_PATH")
+        unit_path = os.environ.get("GRAVITY_SYSTEMD_UNIT_PATH")
         if not unit_path:
             unit_path = "/etc/systemd/system" if not self.user_mode else os.path.expanduser("~/.config/systemd/user")
         return unit_path
@@ -211,8 +211,8 @@ class SystemdProcessManager(BaseProcessManager):
         for config in configs:
             intended_configs = intended_configs | self._process_config(config)
 
-        # the unit dir might not exist if $SYSTEMD_UNIT_PATH is set (e.g. for tests), but this is fine if there are no
-        # intended configs
+        # the unit dir might not exist if $GRAVITY_SYSTEMD_UNIT_PATH is set (e.g. for tests), but this is fine if there
+        # are no intended configs
         if not intended_configs and not os.path.exists(self.__systemd_unit_dir):
             return
 
@@ -225,15 +225,9 @@ class SystemdProcessManager(BaseProcessManager):
         for file in (present_configs - intended_configs):
             unit_name = os.path.basename(file)
             service_name = os.path.splitext(unit_name)[0]
-            info(f"Ensuring service is stopped: {service_name}")
-            info(f"#### unit dir before stop: {os.listdir(self.__systemd_unit_dir)}")
-            info(f"#### systemctl status before stop: {self.__systemctl('status', capture=True)}")
-            info(f"#### systemctl list-units before stop: {self.__systemctl('list-units', capture=True)}")
             self.__systemctl("disable", "--now", unit_name)
-            info(f"#### unit dir after stop: {os.listdir(self.__systemd_unit_dir)}")
             info("Removing service config %s", file)
             os.unlink(file)
-            info(f"#### unit dir after unlink: {os.listdir(self.__systemd_unit_dir)}")
 
     def __unit_names(self, configs, service_names):
         unit_names = []
